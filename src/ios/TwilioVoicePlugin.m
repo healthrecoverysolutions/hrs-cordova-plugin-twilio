@@ -174,7 +174,7 @@ static NSString *const kTwimlParamTo = @"To";
                 NSLog(@"Making call to with params %@", self.outgoingCallParams);
                 TVOConnectOptions *connectOptions = [TVOConnectOptions optionsWithAccessToken:self.accessToken
                                                                                         block:^(TVOConnectOptionsBuilder *builder) {
-                                                                                            builder.params = @{kTwimlParamTo:self.outgoingCallParams[@"To"]};
+                                                                                            builder.params = self.outgoingCallParams;
                                                                                         }];
                 self.call = [TwilioVoice connectWithOptions:connectOptions delegate:self];
                 self.outgoingCallParams = nil;
