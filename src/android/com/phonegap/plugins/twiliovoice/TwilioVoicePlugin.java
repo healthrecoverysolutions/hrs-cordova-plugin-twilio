@@ -19,6 +19,8 @@ import android.os.Bundle;
 // import com.google.firebase.iid.FirebaseInstanceId;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
@@ -31,6 +33,7 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
 import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
@@ -89,6 +92,8 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
     private AudioManager audioManager;
     private int savedAudioMode = AudioManager.MODE_INVALID;
+
+    public static final int PERMISSION_REQUEST_CODE = 0;
 
     private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -180,8 +185,6 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         };
     }
 
-    ;
-
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
@@ -234,19 +237,24 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
             mInitCallbackContext = callbackContext;
 
-            IntentFilter intentFilter = new IntentFilter();
-            //intentFilter.addAction(ACTION_SET_FCM_TOKEN);
-            intentFilter.addAction(ACTION_INCOMING_CALL);
-            // LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
-            // lbm.registerReceiver(mBroadcastReceiver, intentFilter);
+            // request Audio permission
+            if (ContextCompat.checkSelfPermission(cordova.getContext(), Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Has Record Audio Permission. Continue initialize.");
 
-            if (mIncomingCallIntent != null) {
-                Log.d(TAG, "initialize(): Handle an incoming call");
-                handleIncomingCallIntent(mIncomingCallIntent);
-                mIncomingCallIntent = null;
+                initializeWithAccessToken();
+            } else {
+                Log.d(TAG, "Need Record Audio Permission.");
+                CordovaPlugin context = this;
+
+                cordova.getThreadPool().execute(new Runnable() {
+                    public void run() {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                            PermissionHelper.requestPermission(context, PERMISSION_REQUEST_CODE, Manifest.permission.RECORD_AUDIO);
+                        }
+                    }
+                });
             }
-
-            javascriptCallback("onclientinitialized", mInitCallbackContext);
 
             return true;
 
@@ -291,15 +299,37 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         return false;
     }
 
+    private void initializeWithAccessToken() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACTION_INCOMING_CALL);
+
+        if (mIncomingCallIntent != null) {
+            Log.d(TAG, "initialize(): Handle an incoming call");
+            handleIncomingCallIntent(mIncomingCallIntent);
+            mIncomingCallIntent = null;
+        }
+
+        javascriptCallback("onclientinitialized", mInitCallbackContext);
+    }
+
     private void call(final JSONArray arguments, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
                     String accessToken = arguments.getString(0);
-                    String number = arguments.getString(1);
+                    JSONObject options = arguments.getJSONObject(1);
                     Map<String, String> map = new HashMap();
-                    map.put("To", number);
                     map.put("accessToken", accessToken);
+
+                    Iterator<String> keys = options.keys();
+                    while(keys.hasNext()) {
+                        String key = keys.next();
+                        try {
+                            map.put(key, options.getString(key));
+                        } catch (Exception e) {
+                            Log.e(TAG, e.toString());
+                        }
+                    }
 
                     ConnectOptions connectOptions = new ConnectOptions.Builder(accessToken)
                             .params(map)
@@ -570,13 +600,20 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         super.onDestroy();
     }
 
+    @Override
     public void onRequestPermissionResult(int requestCode, String[] permissions,
                                           int[] grantResults) throws JSONException {
-        for (int r : grantResults) {
-            if (r == PackageManager.PERMISSION_DENIED) {
-                mInitCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Permission denied"));
-                return;
+        Boolean permissionError = false;
+        for (int permissionResult : grantResults) {
+            if (permissionResult == PackageManager.PERMISSION_DENIED) {
+                permissionError = true;
             }
+        }
+        if (permissionError) {
+            Log.e(TAG, "Record Audio Permission Failed.");
+        } else {
+            Log.d(TAG, "Record Audio Permission Granted. Initializing Twilio.");
+            initializeWithAccessToken();
         }
     }
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
-    id="cordova-plugin-twilio"
-    version="3.0.0">
+    id="hrs-cordova-plugin-twilio"
+    version="3.0.1">
 
     <name>TwilioVoice</name>
     <description>Use the Twilio SDK for iOS or Android with Cordova. Based on the original plugin</description>
