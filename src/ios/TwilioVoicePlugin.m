@@ -69,9 +69,9 @@ static NSString *const kTwimlParamTo = @"To";
     NSLog(@"Initializing plugin");
     NSString *debugTwilioPreference = [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"TVPEnableDebugging"] uppercaseString];
     if ([debugTwilioPreference isEqualToString:@"YES"] || [debugTwilioPreference isEqualToString:@"TRUE"]) {
-        [TwilioVoice setLogLevel:TVOLogLevelDebug];
+        [TwilioVoiceSDK setLogLevel:TVOLogLevelDebug];
     } else {
-        [TwilioVoice setLogLevel:TVOLogLevelOff];
+        [TwilioVoiceSDK setLogLevel:TVOLogLevelOff];
     }
 
     // read in Enable CallKit preference
@@ -79,7 +79,7 @@ static NSString *const kTwimlParamTo = @"To";
     if ([enableCallKitPreference isEqualToString:@"YES"] || [enableCallKitPreference isEqualToString:@"TRUE"]) {
         self.enableCallKit = YES;
         self.audioDevice = [TVODefaultAudioDevice audioDevice];
-        TwilioVoice.audioDevice = self.audioDevice;
+        TwilioVoiceSDK.audioDevice = self.audioDevice;
     } else {
         self.enableCallKit = NO;
     }
@@ -176,7 +176,7 @@ static NSString *const kTwimlParamTo = @"To";
                                                                                         block:^(TVOConnectOptionsBuilder *builder) {
                                                                                             builder.params = self.outgoingCallParams;
                                                                                         }];
-                self.call = [TwilioVoice connectWithOptions:connectOptions delegate:self];
+                self.call = [TwilioVoiceSDK connectWithOptions:connectOptions delegate:self];
                 self.outgoingCallParams = nil;
             }
         }
@@ -221,7 +221,7 @@ static NSString *const kTwimlParamTo = @"To";
 #pragma mark - AVAudioSession
 - (void)toggleAudioRoute:(BOOL)toSpeaker {
     // The mode set by the Voice SDK is "VoiceChat" so the default audio route is the built-in receiver. Use port override to switch the route.
-    TVODefaultAudioDevice *audioDevice = self.audioDevice != nil ? self.audioDevice : (TVODefaultAudioDevice *)TwilioVoice.audioDevice;
+    TVODefaultAudioDevice *audioDevice = self.audioDevice != nil ? self.audioDevice : (TVODefaultAudioDevice *)TwilioVoiceSDK.audioDevice;
     audioDevice.block =  ^ {
         // We will execute `kDefaultAVAudioSessionConfigurationBlock` first.
         kTVODefaultAVAudioSessionConfigurationBlock();
@@ -286,9 +286,9 @@ static NSString *const kTwimlParamTo = @"To";
                                   ntohl(tokenBytes[6]), ntohl(tokenBytes[7])];
         // NSString *accessToken = [self fetchAccessToken];
 
-        [TwilioVoice registerWithAccessToken:self.accessToken
-                                 deviceToken:self.pushDeviceToken
-                                  completion:^(NSError *error) {
+        [TwilioVoiceSDK registerWithAccessToken:self.accessToken
+                                deviceToken:[self.pushDeviceToken dataUsingEncoding:kCFStringEncodingUTF8]
+                                completion:^(NSError *error) {
              if (error) {
                  NSLog(@"An error occurred while registering: %@", [error localizedDescription]);
              }
@@ -303,8 +303,9 @@ static NSString *const kTwimlParamTo = @"To";
 - (void)pushRegistry:(PKPushRegistry *)registry didInvalidatePushTokenForType:(PKPushType)type {
     if ([type isEqualToString:PKPushTypeVoIP]) {
         NSLog(@"Invalidating push device token for VOIP: %@",self.pushDeviceToken);
-        [TwilioVoice unregisterWithAccessToken:self.accessToken
-                                                    deviceToken:self.pushDeviceToken completion:^(NSError * _Nullable error) {
+        [TwilioVoiceSDK unregisterWithAccessToken:self.accessToken
+                                    deviceToken:[self.pushDeviceToken dataUsingEncoding:kCFStringEncodingUTF8]
+                                    completion:^(NSError * _Nullable error) {
             if (error) {
                 NSLog(@"Error unregistering Voice Client for VOIP Push: %@", [error localizedDescription]);
             } else {
@@ -318,7 +319,7 @@ static NSString *const kTwimlParamTo = @"To";
 - (void)pushRegistry:(PKPushRegistry *)registry didReceiveIncomingPushWithPayload:(PKPushPayload *)payload forType:(PKPushType)type {
     if ([type isEqualToString:PKPushTypeVoIP]) {
         NSLog(@"Received Incoming Push Payload for VOIP: %@",payload.dictionaryPayload);
-        [TwilioVoice handleNotification:payload.dictionaryPayload delegate:self delegateQueue:nil];
+        [TwilioVoiceSDK handleNotification:payload.dictionaryPayload delegate:self delegateQueue:nil];
     }
 }
 
@@ -329,7 +330,7 @@ static NSString *const kTwimlParamTo = @"To";
     self.incomingPushCompletionCallback = completion;
 
     if ([type isEqualToString:PKPushTypeVoIP]) {
-        if (![TwilioVoice handleNotification:payload.dictionaryPayload delegate:self delegateQueue:nil]) {
+        if (![TwilioVoiceSDK handleNotification:payload.dictionaryPayload delegate:self delegateQueue:nil]) {
             NSLog(@"This is not a valid Twilio Voice notification.");
         }
     }
@@ -345,6 +346,10 @@ static NSString *const kTwimlParamTo = @"To";
 #pragma mark TVONotificationDelegate
 - (void)callInviteReceived:(TVOCallInvite *)callInvite {
     [self handleCallInviteReceived:callInvite];
+}
+
+- (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite error:(nonnull NSError *)error { 
+    // TODO: handle this
 }
 
 - (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite {
@@ -712,7 +717,7 @@ static NSString *const kTwimlParamTo = @"To";
         builder.params = @{kTwimlParamTo: strongSelf.outgoingCallParams[@"To"]};
         builder.uuid = uuid;
     }];
-    self.call = [TwilioVoice connectWithOptions:connectOptions delegate:self];
+    self.call = [TwilioVoiceSDK connectWithOptions:connectOptions delegate:self];
     self.callKitCompletionCallback = completionHandler;
 }
 
