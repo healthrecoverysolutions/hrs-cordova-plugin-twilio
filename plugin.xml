@@ -148,8 +148,6 @@
 
         <header-file src="src/ios/TwilioVoicePlugin.h" />
         <source-file src="src/ios/TwilioVoicePlugin.m" />
-
-<!--         <framework src="TwilioVoice" type="podspec" spec="2.0.4" /> -->
         <resource-file src="sounds/ringing.wav" />
         <resource-file src="sounds/traditionalring.mp3" />
 
@@ -158,7 +156,7 @@
             <source url="https://cdn.cocoapods.org/"/>
           </config>
           <pods use-frameworks="true">
-            <pod name="TwilioVoice" spec="5.3.0"/>
+            <pod name="TwilioVoice" spec="6.5.0"/>
           </pods>
         </podspec>
     </platform>
