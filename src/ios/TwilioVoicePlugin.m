@@ -348,11 +348,7 @@ static NSString *const kTwimlParamTo = @"To";
     [self handleCallInviteReceived:callInvite];
 }
 
-- (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite error:(nonnull NSError *)error { 
-    // TODO: handle this
-}
-
-- (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite {
+- (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite error:(nonnull NSError *)error {
     NSLog(@"cancelledCallInviteReceived:");
 
     [self incomingPushHandled];
