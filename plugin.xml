@@ -2,7 +2,7 @@
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="hrs-cordova-plugin-twilio"
-    version="3.0.1">
+    version="3.0.2">
 
     <name>TwilioVoice</name>
     <description>Use the Twilio SDK for iOS or Android with Cordova. Based on the original plugin</description>
@@ -73,7 +73,7 @@
 
         <framework src="com.google.gms:google-services:3.0.0" />
         <!-- <framework src="com.google.firebase:firebase-messaging:10.2.1" /> -->
-        <framework src="com.twilio:voice-android:5.1.1"/>
+        <framework src="com.twilio:voice-android:6.4.0"/>
 
         <source-file src="src/android/com/phonegap/plugins/twiliovoice/TwilioVoicePlugin.java"
                 target-dir="src/com/phonegap/plugins/twiliovoice" />
