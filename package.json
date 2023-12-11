@@ -1,6 +1,6 @@
 {
   "name": "hrs-cordova-plugin-twilio",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Use the Twilio Voice SDK for iOS or Android with Cordova/PhoneGap. Successor to Twilio Client Plugin",
   "scripts": {
     "version": "node ./scripts/version-sync.js"
