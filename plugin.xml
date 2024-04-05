@@ -74,6 +74,7 @@
         <framework src="com.google.gms:google-services:3.0.0" />
         <!-- <framework src="com.google.firebase:firebase-messaging:10.2.1" /> -->
         <framework src="com.twilio:voice-android:5.1.1"/>
+        <framework src="com.jakewharton.timber:timber:5.0.1" />
 
         <source-file src="src/android/com/phonegap/plugins/twiliovoice/TwilioVoicePlugin.java"
                 target-dir="src/com/phonegap/plugins/twiliovoice" />

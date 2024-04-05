@@ -17,7 +17,6 @@ import android.os.Bundle;
 // import android.support.v4.app.NotificationCompat;
 // import android.support.v4.content.LocalBroadcastManager;
 // import com.google.firebase.iid.FirebaseInstanceId;
-import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -44,6 +43,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import timber.log.Timber;
+
 /**
  * Twilio Voice Plugin for Cordova/PhoneGap
  * <p>
@@ -53,9 +54,6 @@ import java.util.Map;
  * @author Jeff Linwood, https://github.com/jefflinwood
  */
 public class TwilioVoicePlugin extends CordovaPlugin {
-
-    public final static String TAG = "TwilioVoicePlugin";
-
     private CallbackContext mInitCallbackContext;
     private JSONArray mInitDeviceSetupArgs;
     private int mCurrentNotificationId = 1;
@@ -101,7 +99,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             String action = intent.getAction();
             if (action.equals(ACTION_SET_FCM_TOKEN)) {
                 String fcmToken = intent.getStringExtra(KEY_FCM_TOKEN);
-                Log.i(TAG, "FCM Token : " + fcmToken);
+                Timber.i("FCM Token : " + fcmToken);
                 mFCMToken = fcmToken;
                 if (fcmToken == null) {
                     javascriptErrorback(0, "Did not receive GCM Token - unable to receive calls", mInitCallbackContext);
@@ -122,12 +120,12 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     private RegistrationListener mRegistrationListener = new RegistrationListener() {
         @Override
         public void onRegistered(String accessToken, String fcmToken) {
-            Log.d(TAG, "Registered Voice Client");
+            Timber.d("Registered Voice Client");
         }
 
         @Override
         public void onError(RegistrationException exception, String accessToken, String fcmToken) {
-            Log.e(TAG, "Error registering Voice Client: " + exception.getMessage(), exception);
+            Timber.e("Error registering Voice Client: " + exception.getMessage(), exception);
         }
     };
 
@@ -138,7 +136,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
             @Override
             public void onRinging(Call call) {
-                Log.d(TAG, "Ringing");
+                Timber.d("Ringing");
             }
 
             @Override
@@ -153,7 +151,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
                     callProperties.putOpt("isMuted", call.isMuted());
                     setAudioFocus(true);
                 } catch (JSONException e) {
-                    Log.e(TAG, e.getMessage(), e);
+                    Timber.e(e.getMessage(), e);
                 }
                 javascriptCallback("oncalldidconnect", callProperties, mInitCallbackContext);
             }
@@ -180,7 +178,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
             @Override
             public void onReconnecting(Call call, CallException exception) {
-                Log.d(TAG, "Reconnecting");
+                Timber.d("Reconnecting");
             }
         };
     }
@@ -188,7 +186,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
-        Log.d(TAG, "initialize()");
+        Timber.d("initialize()");
 
         // initialize sound SoundPoolManager
         SoundPoolManager.getInstance(cordova.getActivity());
@@ -206,7 +204,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     @Override
     public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
         super.onRestoreStateForActivityResult(state, callbackContext);
-        Log.d(TAG, "onRestoreStateForActivityResult()");
+        Timber.d("onRestoreStateForActivityResult()");
         mInitCallbackContext = callbackContext;
     }
 
@@ -231,7 +229,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     public boolean execute(final String action, final JSONArray args,
                            final CallbackContext callbackContext) throws JSONException {
         if ("initializeWithAccessToken".equals(action)) {
-            Log.d(TAG, "Initializing with Access Token");
+            Timber.d("Initializing with Access Token");
 
             mAccessToken = args.optString(0);
 
@@ -240,11 +238,11 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             // request Audio permission
             if (ContextCompat.checkSelfPermission(cordova.getContext(), Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "Has Record Audio Permission. Continue initialize.");
+                Timber.d("Has Record Audio Permission. Continue initialize.");
 
                 initializeWithAccessToken();
             } else {
-                Log.d(TAG, "Need Record Audio Permission.");
+                Timber.d("Need Record Audio Permission.");
                 CordovaPlugin context = this;
 
                 cordova.getThreadPool().execute(new Runnable() {
@@ -304,7 +302,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         intentFilter.addAction(ACTION_INCOMING_CALL);
 
         if (mIncomingCallIntent != null) {
-            Log.d(TAG, "initialize(): Handle an incoming call");
+            Timber.d("initialize(): Handle an incoming call");
             handleIncomingCallIntent(mIncomingCallIntent);
             mIncomingCallIntent = null;
         }
@@ -327,7 +325,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
                         try {
                             map.put(key, options.getString(key));
                         } catch (Exception e) {
-                            Log.e(TAG, e.toString());
+                            Timber.e(e.toString());
                         }
                     }
 
@@ -336,7 +334,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
                             .build();
                     mCall = Voice.connect(cordova.getActivity(), connectOptions, mCallListener);
                 } catch (Exception e) {
-                    Log.e(TAG, e.toString());
+                    Timber.e(e.toString());
                 }
             }
         });
@@ -494,11 +492,11 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             public void run() {
                 String mode = arguments.optString(0);
                 if (mode.equals("on")) {
-                    Log.d(TAG, "SPEAKER");
+                    Timber.d("SPEAKER");
                     audioManager.setMode(AudioManager.MODE_NORMAL);
                     audioManager.setSpeakerphoneOn(true);
                 } else {
-                    Log.d(TAG, "EARPIECE");
+                    Timber.d("EARPIECE");
                     audioManager.setMode(AudioManager.MODE_IN_CALL);
                     audioManager.setSpeakerphoneOn(false);
                 }
@@ -610,9 +608,9 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             }
         }
         if (permissionError) {
-            Log.e(TAG, "Record Audio Permission Failed.");
+            Timber.e("Record Audio Permission Failed.");
         } else {
-            Log.d(TAG, "Record Audio Permission Granted. Initializing Twilio.");
+            Timber.d("Record Audio Permission Granted. Initializing Twilio.");
             initializeWithAccessToken();
         }
     }
@@ -626,7 +624,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
     // Process incoming call invites
     private void handleIncomingCallIntent(Intent intent) {
-        Log.d(TAG, "handleIncomingCallIntent()");
+        Timber.d("handleIncomingCallIntent()");
         if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INCOMING_CALL)) {
             mCallInvite = intent.getParcelableExtra(INCOMING_CALL_INVITE);
             if (mCallInvite != null) {
@@ -640,13 +638,13 @@ public class TwilioVoicePlugin extends CordovaPlugin {
                     callInviteProperties.putOpt("to", mCallInvite.getTo());
                     callInviteProperties.putOpt("callSid", mCallInvite.getCallSid());
                 } catch (JSONException e) {
-                    Log.e(TAG, e.getMessage(), e);
+                    Timber.e(e.getMessage(), e);
                 }
-                Log.d(TAG, "oncallinvitereceived");
+                Timber.d("oncallinvitereceived");
                 javascriptCallback("oncallinvitereceived", callInviteProperties, mInitCallbackContext);
             } else {
                 SoundPoolManager.getInstance(cordova.getActivity()).stopRinging();
-                Log.d(TAG, "oncallinvitecanceled");
+                Timber.d("oncallinvitecanceled");
                 javascriptCallback("oncallinvitecanceled", mInitCallbackContext);
             }
         }
