@@ -1,6 +1,7 @@
 package com.phonegap.plugins.twiliovoice;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -14,8 +15,8 @@ import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
-// import android.support.v4.app.NotificationCompat;
-// import android.support.v4.content.LocalBroadcastManager;
+// import androidx.core.app.NotificationCompat;
+// import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 // import com.google.firebase.iid.FirebaseInstanceId;
 
 import androidx.core.content.ContextCompat;
@@ -80,8 +81,23 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     // Google Play Services Request Magic Number
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
+    // Cordova actions
+    private static final String ACTION_CALL = "call";
+    private static final String ACTION_ACCEPT_CALL_INVITE = "acceptCallInvite";
+    private static final String ACTION_DISCONNECT = "disconnect";
+    private static final String ACTION_SEND_DIGITS = "sendDigits";
+    private static final String ACTION_MUTE_CALL = "muteCall";
+    private static final String ACTION_UN_MUTE_CALL = "unmuteCall";
+    private static final String ACTION_IS_CALL_MUTED = "isCallMuted";
+    private static final String ACTION_CALL_STATUS = "callStatus";
+    private static final String ACTION_REJECT_CALL_INVITE = "rejectCallInvite";
+    private static final String ACTION_SHOW_NOTIFICATION = "showNotification";
+    private static final String ACTION_CANCEL_NOTIFICATION = "cancelNotification";
+    private static final String ACTION_SET_SPEAKER = "setSpeaker";
+
+
     // Constants for Intents and Broadcast Receivers
-    public static final String ACTION_SET_FCM_TOKEN = "SET_FCM_TOKEN";
+    public static final String RECEIVER_ACTION_SET_FCM_TOKEN = "SET_FCM_TOKEN";
     public static final String INCOMING_CALL_INVITE = "INCOMING_CALL_INVITE";
     public static final String INCOMING_CALL_NOTIFICATION_ID = "INCOMING_CALL_NOTIFICATION_ID";
     public static final String ACTION_INCOMING_CALL = "INCOMING_CALL";
@@ -97,7 +113,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(ACTION_SET_FCM_TOKEN)) {
+            if (RECEIVER_ACTION_SET_FCM_TOKEN.equals(action)) {
                 String fcmToken = intent.getStringExtra(KEY_FCM_TOKEN);
                 Timber.i("FCM Token : " + fcmToken);
                 mFCMToken = fcmToken;
@@ -256,40 +272,40 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
             return true;
 
-        } else if ("call".equals(action)) {
+        } else if (ACTION_CALL.equals(action)) {
             call(args, callbackContext);
             return true;
-        } else if ("acceptCallInvite".equals(action)) {
+        } else if (ACTION_ACCEPT_CALL_INVITE.equals(action)) {
             acceptCallInvite(args, callbackContext);
             return true;
-        } else if ("disconnect".equals(action)) {
+        } else if (ACTION_DISCONNECT.equals(action)) {
             disconnect(args, callbackContext);
             return true;
-        } else if ("sendDigits".equals(action)) {
+        } else if (ACTION_SEND_DIGITS.equals(action)) {
             sendDigits(args, callbackContext);
             return true;
-        } else if ("muteCall".equals(action)) {
+        } else if (ACTION_MUTE_CALL.equals(action)) {
             muteCall(callbackContext);
             return true;
-        } else if ("unmuteCall".equals(action)) {
+        } else if (ACTION_UN_MUTE_CALL.equals(action)) {
             unmuteCall(callbackContext);
             return true;
-        } else if ("isCallMuted".equals(action)) {
+        } else if (ACTION_IS_CALL_MUTED.equals(action)) {
             isCallMuted(callbackContext);
             return true;
-        } else if ("callStatus".equals(action)) {
+        } else if (ACTION_CALL_STATUS.equals(action)) {
             callStatus(callbackContext);
             return true;
-        } else if ("rejectCallInvite".equals(action)) {
+        } else if (ACTION_REJECT_CALL_INVITE.equals(action)) {
             rejectCallInvite(args, callbackContext);
             return true;
-        } else if ("showNotification".equals(action)) {
+        } else if (ACTION_SHOW_NOTIFICATION.equals(action)) {
             //showNotification(args, callbackContext);
             return true;
-        } else if ("cancelNotification".equals(action)) {
+        } else if (ACTION_CANCEL_NOTIFICATION.equals(action)) {
             //cancelNotification(args, callbackContext);
             return true;
-        } else if ("setSpeaker".equals(action)) {
+        } else if (ACTION_SET_SPEAKER.equals(action)) {
             setSpeaker(args, callbackContext);
             return true;
         }
@@ -484,8 +500,6 @@ public class TwilioVoicePlugin extends CordovaPlugin {
 
     /**
      * Changes sound from earpiece to speaker and back
-     *
-     * @param mode Speaker Mode
      */
     public void setSpeaker(final JSONArray arguments, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
