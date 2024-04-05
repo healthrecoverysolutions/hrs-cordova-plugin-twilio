@@ -55,31 +55,15 @@ import timber.log.Timber;
  * @author Jeff Linwood, https://github.com/jefflinwood
  */
 public class TwilioVoicePlugin extends CordovaPlugin {
-    private CallbackContext mInitCallbackContext;
-    private JSONArray mInitDeviceSetupArgs;
-    private int mCurrentNotificationId = 1;
-    private String mCurrentNotificationText;
-
-    Call.Listener mCallListener = callListener();
-
-    // Twilio Voice Member Variables
-    private Call mCall;
-    private CallInvite mCallInvite;
-
-    // Access Token
-    private String mAccessToken;
-
-    // FCM Token
-    private String mFCMToken;
-
-    // Has the plugin been initialized
-    private boolean mInitialized = false;
-
-    // An incoming call intent to process (can be null)
-    private Intent mIncomingCallIntent;
-
-    // Google Play Services Request Magic Number
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
+    public static final int PERMISSION_REQUEST_CODE = 0;
+
+    // Constants for Intents and Broadcast Receivers
+    public static final String RECEIVER_ACTION_SET_FCM_TOKEN = "SET_FCM_TOKEN";
+    public static final String INCOMING_CALL_INVITE = "INCOMING_CALL_INVITE";
+    public static final String INCOMING_CALL_NOTIFICATION_ID = "INCOMING_CALL_NOTIFICATION_ID";
+    public static final String ACTION_INCOMING_CALL = "INCOMING_CALL";
+    public static final String KEY_FCM_TOKEN = "FCM_TOKEN";
 
     // Cordova actions
     private static final String ACTION_CALL = "call";
@@ -94,20 +78,34 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     private static final String ACTION_SHOW_NOTIFICATION = "showNotification";
     private static final String ACTION_CANCEL_NOTIFICATION = "cancelNotification";
     private static final String ACTION_SET_SPEAKER = "setSpeaker";
+    private static final String ACTION_SET_SHARED_EVENT_LISTENER = "setSharedEventListener";
+
+    // Event constants
+    private static final JSONObject JSON_OBJECT_EMPTY = new JSONObject();
+    private static final String KEY_TYPE = "type";
+    private static final String KEY_DATA = "data";
 
 
-    // Constants for Intents and Broadcast Receivers
-    public static final String RECEIVER_ACTION_SET_FCM_TOKEN = "SET_FCM_TOKEN";
-    public static final String INCOMING_CALL_INVITE = "INCOMING_CALL_INVITE";
-    public static final String INCOMING_CALL_NOTIFICATION_ID = "INCOMING_CALL_NOTIFICATION_ID";
-    public static final String ACTION_INCOMING_CALL = "INCOMING_CALL";
-
-    public static final String KEY_FCM_TOKEN = "FCM_TOKEN";
 
     private AudioManager audioManager;
     private int savedAudioMode = AudioManager.MODE_INVALID;
-
-    public static final int PERMISSION_REQUEST_CODE = 0;
+    private CallbackContext sharedEventContext;
+    private CallbackContext mInitCallbackContext;
+    private JSONArray mInitDeviceSetupArgs;
+    private int mCurrentNotificationId = 1;
+    private String mCurrentNotificationText;
+    Call.Listener mCallListener = callListener();
+    // Twilio Voice Member Variables
+    private Call mCall;
+    private CallInvite mCallInvite;
+    // Access Token
+    private String mAccessToken;
+    // FCM Token
+    private String mFCMToken;
+    // Has the plugin been initialized
+    private boolean mInitialized = false;
+    // An incoming call intent to process (can be null)
+    private Intent mIncomingCallIntent;
 
     private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -308,9 +306,39 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         } else if (ACTION_SET_SPEAKER.equals(action)) {
             setSpeaker(args, callbackContext);
             return true;
+        } else if (ACTION_SET_SHARED_EVENT_LISTENER.equals(action)) {
+            setSharedEventListener(callbackContext);
+            return true;
         }
 
         return false;
+    }
+
+    private void setSharedEventListener(CallbackContext callbackContext) {
+        if (sharedEventContext != null) {
+            sharedEventContext.error("event listener callback overwritten");
+        }
+        sharedEventContext = callbackContext;
+    }
+
+    private void emitSharedJsEvent(String type, JSONObject data) {
+        Timber.d("emitSharedJsEvent -> %s", type);
+        try {
+            if (sharedEventContext == null) {
+                return;
+            }
+            if (data == null) {
+                data = JSON_OBJECT_EMPTY;
+            }
+            JSONObject payload = new JSONObject()
+                .put(KEY_TYPE, type)
+                .put(KEY_DATA, data);
+            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, payload);
+            pluginResult.setKeepCallback(true);
+            sharedEventContext.sendPluginResult(pluginResult);
+        } catch (JSONException e) {
+            Timber.e("emitSharedJsEvent failed! -> %s", e.getMessage());
+        }
     }
 
     private void initializeWithAccessToken() {
