@@ -668,18 +668,29 @@ public class TwilioVoicePlugin extends CordovaPlugin implements AudioManager.OnA
         Timber.d("setAudioFocus() %s", setFocus);
         if (audioManager != null) {
             if (setFocus) {
+
+                // Save the current mode so we can revert later
+                savedAudioMode = audioManager.getMode();
+                int targetMode = AudioManager.MODE_NORMAL;
+
+                // If lower than android 11 (API 30) then revert to previous behavior.
+                // (Fixes choppy / inaudible sound)
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                    targetMode = AudioManager.MODE_IN_COMMUNICATION;
+                }
+
                 /*
                  * Start by setting MODE_IN_COMMUNICATION as default audio mode. It is
                  * required to be in this mode when playout and/or recording starts for
                  * best possible VoIP performance. Some devices have difficulties with speaker mode
                  * if this is not set.
-                 * 
+                 *
                  * EDIT 04-30-2024:
                  * Need to use MODE_NORMAL to get sufficient volume output levels from the other call participant.
                  * We do not utilize recording functionality from twilio, so the above limitation can be bypassed.
                  */
-                savedAudioMode = audioManager.getMode();
-                audioManager.setMode(AudioManager.MODE_NORMAL);
+                audioManager.setMode(targetMode);
+                Timber.d("audio mode set to %s", targetMode);
 
                 final int focusType = AudioManager.AUDIOFOCUS_GAIN;
 
