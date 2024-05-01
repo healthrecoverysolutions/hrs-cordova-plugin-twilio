@@ -34,7 +34,7 @@ static NSString *const kTwimlParamTo = @"To";
 @property (nonatomic, strong) TVOCallInvite *callInvite;
 
 // Device Token from Apple Push Notification Service for VOIP
-@property (nonatomic, strong) NSString *pushDeviceToken;
+@property (nonatomic, strong) NSData *pushDeviceTokenData;
 
 // Access Token from Twilio
 @property (nonatomic, strong) NSString *accessToken;
@@ -280,15 +280,12 @@ static NSString *const kTwimlParamTo = @"To";
 
     if ([type isEqualToString:PKPushTypeVoIP]) {
         const unsigned *tokenBytes = [credentials.token bytes];
-        self.pushDeviceToken = [NSString stringWithFormat:@"<%08x %08x %08x %08x %08x %08x %08x %08x>",
-                                  ntohl(tokenBytes[0]), ntohl(tokenBytes[1]), ntohl(tokenBytes[2]),
-                                  ntohl(tokenBytes[3]), ntohl(tokenBytes[4]), ntohl(tokenBytes[5]),
-                                  ntohl(tokenBytes[6]), ntohl(tokenBytes[7])];
-        // NSString *accessToken = [self fetchAccessToken];
-
+        self.pushDeviceTokenData = credentials.token;
+        NSLog(@"Updating push device token for VOIP");
+        
         [TwilioVoiceSDK registerWithAccessToken:self.accessToken
-                                deviceToken:[self.pushDeviceToken dataUsingEncoding:kCFStringEncodingUTF8]
-                                completion:^(NSError *error) {
+                                 deviceToken:credentials.token
+                                  completion:^(NSError *error) {
              if (error) {
                  NSLog(@"An error occurred while registering: %@", [error localizedDescription]);
              }
@@ -302,16 +299,15 @@ static NSString *const kTwimlParamTo = @"To";
 
 - (void)pushRegistry:(PKPushRegistry *)registry didInvalidatePushTokenForType:(PKPushType)type {
     if ([type isEqualToString:PKPushTypeVoIP]) {
-        NSLog(@"Invalidating push device token for VOIP: %@",self.pushDeviceToken);
+        NSLog(@"Invalidating push device token for VOIP: %@",self.pushDeviceTokenData);
         [TwilioVoiceSDK unregisterWithAccessToken:self.accessToken
-                                    deviceToken:[self.pushDeviceToken dataUsingEncoding:kCFStringEncodingUTF8]
-                                    completion:^(NSError * _Nullable error) {
+                                                    deviceToken:self.pushDeviceTokenData completion:^(NSError * _Nullable error) {
             if (error) {
                 NSLog(@"Error unregistering Voice Client for VOIP Push: %@", [error localizedDescription]);
             } else {
                 NSLog(@"Unegistered Voice Client for VOIP Push");
             }
-            self.pushDeviceToken = nil;
+            self.pushDeviceTokenData = nil;
         }];
     }
 }
@@ -349,6 +345,40 @@ static NSString *const kTwimlParamTo = @"To";
 }
 
 - (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite error:(nonnull NSError *)error {
+    NSLog(@"cancelledCallInviteReceived:");
+        
+        [self incomingPushHandled];
+        
+        if (!self.callInvite ||
+            ![self.callInvite.callSid isEqualToString:cancelledCallInvite.callSid]) {
+            NSLog(@"No matching pending CallInvite. Ignoring the Cancelled CallInvite");
+            return;
+        }
+        if (self.enableCallKit) {
+            [self performEndCallActionWithUUID:self.callInvite.uuid];
+        } else {
+            [self cancelNotification];
+            //pause ringtone
+            [self.ringtonePlayer pause];
+        }
+        
+        NSMutableDictionary *callInviteProperties = [NSMutableDictionary new];
+        if (self.callInvite.from) {
+            callInviteProperties[@"from"] = self.callInvite.from;
+        }
+        if (self.callInvite.to) {
+            callInviteProperties[@"to"] = self.callInvite.to;
+        }
+        if (self.callInvite.callSid) {
+            callInviteProperties[@"callSid"] = self.callInvite.callSid;
+        }
+        
+        self.callInvite = nil;
+        [self incomingPushHandled];
+        [self javascriptCallback:@"oncallinvitecanceled" withArguments:callInviteProperties];
+}
+
+- (void)cancelledCallInviteReceived:(nonnull TVOCancelledCallInvite *)cancelledCallInvite {
     NSLog(@"cancelledCallInviteReceived:");
 
     [self incomingPushHandled];

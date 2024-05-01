@@ -156,7 +156,7 @@
             <source url="https://cdn.cocoapods.org/"/>
           </config>
           <pods use-frameworks="true">
-            <pod name="TwilioVoice" spec="6.5.0"/>
+            <pod name="TwilioVoice" spec="6.10.4"/>
           </pods>
         </podspec>
     </platform>
