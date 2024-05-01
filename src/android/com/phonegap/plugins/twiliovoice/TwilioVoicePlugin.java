@@ -55,7 +55,7 @@ import timber.log.Timber;
  *
  * @author Jeff Linwood, https://github.com/jefflinwood
  */
-public class TwilioVoicePlugin extends CordovaPlugin {
+public class TwilioVoicePlugin extends CordovaPlugin implements AudioManager.OnAudioFocusChangeListener {
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     public static final int PERMISSION_REQUEST_CODE = 0;
 
@@ -622,41 +622,102 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         });
     }
 
+    @Override
+    public void onAudioFocusChange(int i) {
+        Timber.d("onAudioFocusChange() focus = %s", nameOfAudioFocusGainConstant(i));
+    }
+
+    private static String nameOfAudioFocusGainConstant(int audioFocus) {
+        switch (audioFocus) {
+            case AudioManager.AUDIOFOCUS_GAIN:
+                return "AUDIOFOCUS_GAIN";
+            case AudioManager.AUDIOFOCUS_GAIN_TRANSIENT:
+                return "AUDIOFOCUS_GAIN_TRANSIENT";
+            case AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK:
+                return "AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK";
+            case AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE:
+                return "AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE";
+            case AudioManager.AUDIOFOCUS_LOSS:
+                return "AUDIOFOCUS_LOSS";
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                return "AUDIOFOCUS_LOSS_TRANSIENT";
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                return "AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK";
+            case AudioManager.AUDIOFOCUS_NONE:
+                return "AUDIOFOCUS_NONE";
+            default:
+                return "UNKNOWN";
+        }
+    }
+
+    private static String nameOfAudioFocusRequestConstant(int audioFocus) {
+        switch (audioFocus) {
+            case AudioManager.AUDIOFOCUS_REQUEST_FAILED:
+                return "AUDIOFOCUS_REQUEST_FAILED";
+            case AudioManager.AUDIOFOCUS_REQUEST_GRANTED:
+                return "AUDIOFOCUS_REQUEST_GRANTED";
+            case AudioManager.AUDIOFOCUS_REQUEST_DELAYED:
+                return "AUDIOFOCUS_REQUEST_DELAYED";
+            default:
+                return "UNKNOWN";
+        }
+    }
+
     @SuppressLint("WrongConstant")
     private void setAudioFocus(boolean setFocus) {
+        Timber.d("setAudioFocus() %s", setFocus);
         if (audioManager != null) {
             if (setFocus) {
+
+                // Save the current mode so we can revert later
                 savedAudioMode = audioManager.getMode();
-                // Request audio focus before making any device switch.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    AudioAttributes playbackAttributes = new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build();
-                    AudioFocusRequest focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                            .setAudioAttributes(playbackAttributes)
-                            .setAcceptsDelayedFocusGain(true)
-                            .setOnAudioFocusChangeListener(new AudioManager.OnAudioFocusChangeListener() {
-                                @Override
-                                public void onAudioFocusChange(int i) {
-                                }
-                            })
-                            .build();
-                    audioManager.requestAudioFocus(focusRequest);
-                } else {
-                    audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL,
-                            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                int targetMode = AudioManager.MODE_NORMAL;
+
+                // If lower than android 11 (API 30) then revert to previous behavior.
+                // (Fixes choppy / inaudible sound)
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                    targetMode = AudioManager.MODE_IN_COMMUNICATION;
                 }
+
                 /*
                  * Start by setting MODE_IN_COMMUNICATION as default audio mode. It is
                  * required to be in this mode when playout and/or recording starts for
                  * best possible VoIP performance. Some devices have difficulties with speaker mode
                  * if this is not set.
+                 *
+                 * EDIT 04-30-2024:
+                 * Need to use MODE_NORMAL to get sufficient volume output levels from the other call participant.
+                 * We do not utilize recording functionality from twilio, so the above limitation can be bypassed.
                  */
-                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                audioManager.setMode(targetMode);
+                Timber.d("audio mode set to %s", targetMode);
+
+                final int focusType = AudioManager.AUDIOFOCUS_GAIN;
+
+                // Request audio focus before making any device switch.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    AudioAttributes playbackAttributes = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build();
+                    AudioFocusRequest focusRequest = new AudioFocusRequest.Builder(focusType)
+                        .setAudioAttributes(playbackAttributes)
+                        .setAcceptsDelayedFocusGain(true)
+                        .setOnAudioFocusChangeListener(this)
+                        .build();
+                    final int resultCode = audioManager.requestAudioFocus(focusRequest);
+                    final String resultName = nameOfAudioFocusRequestConstant(resultCode);
+                    Timber.d("audio focus request result (new API) = %s", resultName);
+                } else {
+                    final int resultCode = audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, focusType);
+                    final String resultName = nameOfAudioFocusRequestConstant(resultCode);
+                    Timber.d("audio focus request result (legacy API) = %s", resultName);
+                }
             } else {
                 audioManager.setMode(savedAudioMode);
-                audioManager.abandonAudioFocus(null);
+                final int resultCode = audioManager.abandonAudioFocus(this);
+                final String resultName = nameOfAudioFocusRequestConstant(resultCode);
+                Timber.d("abandon audio focus request result = %s", resultName);
             }
         }
     }
@@ -839,5 +900,4 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         }
         return json;
     }
-
 }
