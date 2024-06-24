@@ -44,6 +44,10 @@
         Cordova.exec(fn, null, "TwilioVoicePlugin", "isCallMuted", null);
     }
 
+    TwilioPlugin.TwilioVoiceClient.prototype.setSharedEventListener = function(listener, error) {
+        Cordova.exec(listener, error, "TwilioVoicePlugin", "setSharedEventListener", []);
+    }
+
     TwilioPlugin.TwilioVoiceClient.prototype.initialize = function(token) {
 
         var error = function(error) {
