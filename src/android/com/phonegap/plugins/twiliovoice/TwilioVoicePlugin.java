@@ -144,7 +144,9 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             @Override
             public void onConnected(Call call) {
                 mCall = call;
-
+                Log.d(TAG, "On twilio call connected");
+                Intent serviceIntent = new Intent(cordova.getActivity(), AudioForegroundService.class);
+                cordova.getActivity().startForegroundService(serviceIntent);
                 JSONObject callProperties = new JSONObject();
                 try {
                     callProperties.putOpt("from", call.getFrom());
@@ -161,6 +163,8 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             @Override
             public void onDisconnected(Call call, CallException exception) {
                 mCall = null;
+                Log.d(TAG, "On Twilio call disconnected");
+                stopForegroundService();
                 setAudioFocus(false);
                 javascriptCallback("oncalldiddisconnect", mInitCallbackContext);
             }
@@ -312,6 +316,16 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         javascriptCallback("onclientinitialized", mInitCallbackContext);
     }
 
+    private void stopForegroundService() {
+        if(AudioForegroundService.isRunning()) {
+            Log.d(TAG, "Stopping audio foreground service");
+            Intent serviceIntent = new Intent(cordova.getActivity(), AudioForegroundService.class);
+            cordova.getActivity().stopService(serviceIntent);
+        } else {
+            Log.d(TAG, "Audio foreground service is not running");
+        }
+    }
+
     private void call(final JSONArray arguments, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
@@ -376,11 +390,13 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         if (mCall == null) {
             callbackContext.sendPluginResult(new PluginResult(
                     PluginResult.Status.ERROR));
+            stopForegroundService();
             return;
         }
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 mCall.disconnect();
+                stopForegroundService();
                 callbackContext.success();
             }
         });
@@ -450,6 +466,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         if (state == null) {
             state = "";
         }
+
         PluginResult result = new PluginResult(PluginResult.Status.OK, state);
         callbackContext.sendPluginResult(result);
     }
@@ -597,6 +614,7 @@ public class TwilioVoicePlugin extends CordovaPlugin {
         SoundPoolManager.getInstance(cordova.getActivity()).release();
         // LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
         // lbm.unregisterReceiver(mBroadcastReceiver);
+        stopForegroundService();
         super.onDestroy();
     }
 
