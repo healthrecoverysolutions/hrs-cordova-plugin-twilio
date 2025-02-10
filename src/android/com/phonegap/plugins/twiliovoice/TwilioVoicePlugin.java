@@ -145,8 +145,10 @@ public class TwilioVoicePlugin extends CordovaPlugin {
             public void onConnected(Call call) {
                 mCall = call;
                 Log.d(TAG, "On twilio call connected");
-                Intent serviceIntent = new Intent(cordova.getActivity(), AudioForegroundService.class);
-                cordova.getActivity().startForegroundService(serviceIntent);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    Intent serviceIntent = new Intent(cordova.getActivity(), AudioForegroundService.class);
+                    cordova.getActivity().startForegroundService(serviceIntent);
+                }
                 JSONObject callProperties = new JSONObject();
                 try {
                     callProperties.putOpt("from", call.getFrom());
@@ -317,12 +319,14 @@ public class TwilioVoicePlugin extends CordovaPlugin {
     }
 
     private void stopForegroundService() {
-        if(AudioForegroundService.isRunning()) {
-            Log.d(TAG, "Stopping audio foreground service");
-            Intent serviceIntent = new Intent(cordova.getActivity(), AudioForegroundService.class);
-            cordova.getActivity().stopService(serviceIntent);
-        } else {
-            Log.d(TAG, "Audio foreground service is not running");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (AudioForegroundService.isRunning()) {
+                Log.d(TAG, "Stopping audio foreground service");
+                Intent serviceIntent = new Intent(cordova.getActivity(), AudioForegroundService.class);
+                cordova.getActivity().stopService(serviceIntent);
+            } else {
+                Log.d(TAG, "Audio foreground service is not running");
+            }
         }
     }
 
