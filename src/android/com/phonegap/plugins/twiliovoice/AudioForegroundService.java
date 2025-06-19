@@ -1,14 +1,21 @@
 package com.phonegap.plugins.twiliovoice;
 
-import android.app.*;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
 import android.content.Intent;
-import android.os.Build;
 import android.os.IBinder;
+
 import androidx.core.app.NotificationCompat;
 
 public class AudioForegroundService extends Service {
 
     private static boolean isServiceRunning = false;
+
+    public static boolean isRunning() {
+        return isServiceRunning;
+    }
 
     @Override
     public void onCreate() {
@@ -17,17 +24,11 @@ public class AudioForegroundService extends Service {
         startForeground(1, createNotification());
     }
 
-    public static boolean isRunning() {
-        return isServiceRunning;
-    }
-
     private Notification createNotification() {
         String channelId = "ForegroundServiceChannel";
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                channelId, "Foreground Service", NotificationManager.IMPORTANCE_LOW);
-            getSystemService(NotificationManager.class).createNotificationChannel(channel);
-        }
+        NotificationChannel channel = new NotificationChannel(
+            channelId, "Foreground Service", NotificationManager.IMPORTANCE_LOW);
+        getSystemService(NotificationManager.class).createNotificationChannel(channel);
 
         return new NotificationCompat.Builder(this, channelId)
             .setContentTitle("Voice call")
