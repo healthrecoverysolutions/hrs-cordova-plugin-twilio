@@ -13,9 +13,9 @@
     </js-module>
 
     <engines>
-        <engine name="cordova" version=">=7.0.0"/>
-        <engine name="cordova-android" version=">=6.3.0"/>
-        <engine name="cordova-ios" version=">=4.4.0"/>
+      <engine name="cordova" version="12.0.1" />
+      <engine name="cordova-android" version="14.0.0" />
+      <engine name="cordova-ios" version=">=5.0.0" />
     </engines>
 
     <!-- Necessary to set app name for incoming call notifications on Android and CallKit on iOS -->
@@ -76,7 +76,7 @@
             <string name="incoming_call_app_name" translatable="false">$INCOMING_CALL_APP_NAME</string>
         </config-file>
 
-        <framework src="com.google.gms:google-services:3.0.0" />
+        <framework src="com.google.gms:google-services:4.3.4" />
         <!-- <framework src="com.google.firebase:firebase-messaging:10.2.1" /> -->
         <framework src="com.twilio:voice-android:6.4.0"/>
 

@@ -21,20 +21,6 @@
     "cordova-android",
     "cordova-ios"
   ],
-  "engines": {
-    "cordovaDependencies": {
-      "<2.5.0": {
-        "cordova-ios": ">=4.3.0",
-        "cordova-android": ">=6.0.0",
-        "cordova": ">=6.4.0"
-      },
-      ">2.5.0": {
-        "cordova-ios": ">=4.4.0",
-        "cordova-android": ">=6.3.0",
-        "cordova": ">=7.0.0"
-      }
-    }
-  },
   "author": "Jeff Linwood",
   "license": "MIT",
   "bugs": {
